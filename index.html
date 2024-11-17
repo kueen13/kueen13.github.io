@@ -231,6 +231,7 @@
                 // console.log('mousemove');
                 mouseMove(event.offsetX, event.offsetY, env);
             });
+
             canvas.addEventListener("touchstart", (event) => {
                 if (env.click) {
                     return;
@@ -239,7 +240,8 @@
                 env.click = true;
                 // console.log('touchstart');
                 tmp = event.changedTouches[0];
-                mouseDown(tmp.clientX, tmp.clientY, env);
+                console.log(event);
+                mouseDown(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
             });
             canvas.addEventListener("touchend", (event) => {
                 if (!env.click) {
@@ -249,7 +251,7 @@
                 env.click = false;
                 // console.log('touchend');
                 tmp = event.changedTouches[0];
-                mouseUp(tmp.clientX, tmp.clientY, env);
+                mouseUp(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
             });
             canvas.addEventListener("touchmove", (event) => {
                 if (!env.click) {
@@ -258,7 +260,7 @@
                 env.mobile = true;
                 // console.log('touchmove');
                 tmp = event.changedTouches[0];
-                mouseMove(tmp.clientX, tmp.clientY, env);
+                mouseMove(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
             });
             // window.onresize = (event) => {
             //     env.geometry = setGeometry(env.canvas);
