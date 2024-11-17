@@ -425,7 +425,28 @@
         }
 
         function initValue(env) {
-            generateMatrix(env.matrix, 0, 0, env.geometry.colNum, env.geometry.rowNum, 0.5);
+            // generateMatrix(env.matrix, 0, 0, env.geometry.colNum, env.geometry.rowNum, 0.5);
+            let geometry = env.geometry;
+            for (let i = 0; i < geometry.rowNum; ++i) {
+                for(let j = 0; j < geometry.colNum; ++j) {
+                    env.matrix[i][j] = 0;
+                }
+            }
+            let count = 0;
+
+            let index = 0;
+            let total = geometry.rowNum * geometry.colNum;
+            let target = Math.floor(total / 2);
+            while (count < target) {
+                index %= total;
+                let i = Math.floor(index / geometry.colNum);
+                let j = index % geometry.colNum;
+                if (env.matrix[i][j] == 0 && Math.random() > 0.5) {
+                    env.matrix[i][j] = 1;
+                    count += 1;
+                }
+                index += 1;
+            }
             env.score = 0;
         }
 
