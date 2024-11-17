@@ -135,7 +135,7 @@
                 y += height;
                 height = - height;
             }
-            // console.log(x, y, width, height);
+            console.log(x, y, width, height);
 
             let x1 = x + width;
             let y1 = y + height;
@@ -144,14 +144,21 @@
             x1 = Math.min(Math.max(x1 - geometry.panelX - geometry.panelPadding, 0), geometry.panelWidth);
             y1 = Math.min(Math.max(y1 - geometry.panelY - geometry.panelPadding, 0), geometry.panelHeight);
 
-            // console.log(x0, y0, x1, y1);
+            console.log(x0, y0, x1, y1);
 
             let colStart = Math.floor(x0 / (geometry.gridSize + geometry.gridMargin));
             let rowStart = Math.floor(y0 / (geometry.gridSize + geometry.gridMargin));
             let colEnd = Math.ceil(x1 / (geometry.gridSize + geometry.gridMargin));
             let rowEnd = Math.ceil(y1 / (geometry.gridSize + geometry.gridMargin));
 
-            // console.log(rowStart, rowEnd, colStart, colEnd);
+            if (colEnd > env.geometry.colNum) {
+                colEnd = env.geometry.colNum;
+            }
+            if (rowEnd > env.geometry.rowNum) {
+                rowEnd = env.geometry.rowNum;
+            }
+
+            console.log(rowStart, rowEnd, colStart, colEnd);
             
             let count = 0;
             for (let i = rowStart; i < rowEnd; ++i) {
@@ -164,7 +171,7 @@
                 return;
             }
             env.score += total - count;
-            // console.log('score', env.score);
+            console.log('score', env.score);
             generateMatrix(env.matrix, colStart, rowStart, colEnd - colStart, rowEnd - rowStart, 0.6);
         }
 
