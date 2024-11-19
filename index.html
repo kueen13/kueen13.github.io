@@ -54,6 +54,12 @@
             let resetY = 10;
             let resetSize = 48;
 
+            let whiteTagX = tmpWidth / 4;
+            let blackTagX = tmpWidth * 3 / 4;
+            let tagY = panelY;
+            let tagStyle = 'bolder 36px Sans-serif';
+
+
             return {
                 x: x,
                 y: y,
@@ -78,7 +84,11 @@
                 scoreY: scoreY,
                 resetX: resetX,
                 resetY: resetY,
-                resetSize: resetSize
+                resetSize: resetSize,
+                whiteTagX: whiteTagX,
+                blackTagX: blackTagX,
+                tagY: tagY,
+                tagStyle: tagStyle
             };
         }
 
@@ -120,7 +130,7 @@
             }
         }
 
-        function handleSelect(env) {
+        function handleSelect(env, flap) {
             let selection = env.selection;
             let geometry = env.geometry;
             let x = selection.x;
@@ -135,8 +145,6 @@
                 y += height;
                 height = - height;
             }
-            console.log(env);
-            console.log(x, y, width, height);
 
             let x1 = x + width;
             let y1 = y + height;
@@ -145,12 +153,15 @@
             x1 = Math.min(Math.max(x1 - geometry.panelX - geometry.panelPadding, 0), geometry.panelWidth - geometry.panelPadding * 2);
             y1 = Math.min(Math.max(y1 - geometry.panelY - geometry.panelPadding, 0), geometry.panelHeight - geometry.panelPadding * 2);
 
-            console.log(x0, y0, x1, y1);
+            // let colStart = Math.floor((x0 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            // let rowStart = Math.floor((y0 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            // let colEnd = Math.floor((x1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            // let rowEnd = Math.floor((y1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
 
-            let colStart = Math.floor((x0 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            let rowStart = Math.floor((y0 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            let colEnd = Math.floor((x1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            let rowEnd = Math.floor((y1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            let colStart = Math.ceil((x0 - geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            let rowStart = Math.ceil((y0 - geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            let colEnd = Math.floor((x1 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            let rowEnd = Math.floor((y1 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
 
             if (colEnd > env.geometry.colNum) {
                 colEnd = env.geometry.colNum;
@@ -159,8 +170,12 @@
                 rowEnd = env.geometry.rowNum;
             }
 
-            console.log(rowStart, rowEnd, colStart, colEnd);
-            
+            env.selection.rowStart = rowStart;
+            env.selection.rowEnd = rowEnd;
+            env.selection.colStart = colStart;
+            env.selection.colEnd = colEnd;
+
+
             let count = 0;
             for (let i = rowStart; i < rowEnd; ++i) {
                 for (let j = colStart; j < colEnd; ++j) {
@@ -168,21 +183,26 @@
                 }
             }
             let total = (colEnd - colStart) * (rowEnd - rowStart);
-            if (count * 2 <= total) {
+
+            env.white = count;
+            env.black = total - count;
+
+            if (!flap) {
                 return;
             }
-            if (count >= total) {
+
+            if (count * 2 <= total || count >= total) {
+                env.white = env.black = 0;
                 return;
             }
             env.score += total - count;
-            // console.log('score', env.score);
-            // generateMatrix(env.matrix, colStart, rowStart, colEnd - colStart, rowEnd - rowStart, 0.6);
             for (let i = rowStart; i < rowEnd; ++i) {
                 for (let j = colStart; j < colEnd; ++j) {
                     env.matrix[i][j] = 1 - env.matrix[i][j];
-                    // count += env.matrix[i][j];
                 }
             }
+            env.black = env.white = 0;
+            // calc(env);
         }
 
         function mouseDown(x, y, env) {
@@ -195,6 +215,7 @@
                 env.selection.y = y;
                 env.selection.width = x - env.selection.x;
                 env.selection.height = y - env.selection.y;
+                env.selection.colStart = env.selection.colEnd = env.selection.rowStart = env.selection.rowEnd = 0;
             }
             env.click.x = x;
             env.click.y = y;
@@ -202,7 +223,7 @@
         }
         function mouseUp(x, y, env) {
             if (env.selection.visible) {
-                handleSelect(env);
+                handleSelect(env, true);
             } else if (env.click.valid) {
                 if (x >= geometry.resetX && x < geometry.resetX + geometry.resetSize &&
                     y >= geometry.resetY && x < geometry.resetY + geometry.resetSize
@@ -217,6 +238,7 @@
             if (env.selection.visible) {
                 env.selection.width = x - env.selection.x;
                 env.selection.height = y - env.selection.y;
+                handleSelect(env, false);
             }
             if ((x - env.click.x) * (x - env.click.x) + (y - env.click.y) * (y - env.click.y) >= 625) {
                 env.click.valid = false;
@@ -257,7 +279,7 @@
                 env.click = true;
                 // console.log('touchstart');
                 tmp = event.changedTouches[0];
-                console.log(event);
+                // console.log(event);
                 mouseDown(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
             });
             canvas.addEventListener("touchend", (event) => {
@@ -313,7 +335,10 @@
                 geometry: geometry,
                 matrix: matrix,
                 selection: selection,
-                click: click
+                click: click,
+                score: 0,
+                black: 0,
+                white: 0
             }
         }
 
@@ -358,6 +383,22 @@
                 }
                 y += geometry.gridSize + geometry.gridMargin;
             }
+            let selection = env.selection;
+
+            if (selection.visible) {
+                ctx.fillStyle = ctx.strokeStyle = '#e6b422';
+                y = geometry.panelY + geometry.panelPadding + selection.rowStart * (geometry.gridSize + geometry.gridMargin);
+                for (let i = selection.rowStart; i < selection.rowEnd; ++i) {
+                    let x = geometry.panelX + geometry.panelPadding + selection.colStart * (geometry.gridSize + geometry.gridMargin);
+                    for (let j = selection.colStart; j < selection.colEnd; ++j) {
+                        drawRoundedRect(ctx, x, y, geometry.gridSize, geometry.gridSize, geometry.gridRaidus);
+                        x += geometry.gridSize + geometry.gridMargin;
+                    }
+                    y += geometry.gridSize + geometry.gridMargin;
+                }
+            }
+
+
         }
 
         function drawCircle(ctx, x, y, size) {
@@ -415,6 +456,13 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(env.score, geometry.scoreX, geometry.scoreY);
+
+            ctx.font = geometry.tagStyle;
+            ctx.textBaseline = 'bottom';
+            ctx.fillStyle = ctx.strokeStyle = '#eeeeee';
+            ctx.fillText(env.white, geometry.whiteTagX, geometry.tagY);
+            ctx.fillStyle = ctx.strokeStyle = '#222831';
+            ctx.fillText(env.black, geometry.blackTagX, geometry.tagY);
         }
 
         function run(timestamp, env) {
@@ -434,7 +482,6 @@
                 }
             }
             let count = 0;
-
             let index = 0;
             let total = geometry.rowNum * geometry.colNum;
             let target = Math.floor(total / 2);
@@ -451,12 +498,27 @@
             env.score = 0;
         }
 
+        // function calc(env) {
+        //     let geometry = env.geometry;
+        //     for (let i = 0; i < geometry.rowNum; ++i) {
+        //         for(let j = 0; j < geometry.colNum; ++j) {
+        //             env.pretreat[i][j] = 0;
+        //             let A = i > 0 ? env.pretreat[i-1][j] : 0;
+        //             let B = j > 0 ? env.pretreat[i][j-1] : 0;
+        //             let C = j > 0 && i > 0 ? env.pretreat[i-1][j-1] : 0;
+        //             env.pretreat[i][j] = A + B - C + env.matrix[i][j];
+        //         }
+        //     }
+        //     env.black = env.white = 0;
+        // }
+
         (function() {
             let env = init();
             env.mobile = false;
             env.click = false;
             initEvent(env);
             initValue(env);
+            // calc(env);
             function loop(timestamp) {
                 run(timestamp, env);
                 window.requestAnimationFrame(loop);
