@@ -158,17 +158,15 @@
             // let colEnd = Math.floor((x1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
             // let rowEnd = Math.floor((y1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
 
-            let colStart = Math.ceil((x0 - geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            let rowStart = Math.ceil((y0 - geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            let colEnd = Math.floor((x1 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            let rowEnd = Math.floor((y1 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
+            let colStart = Math.ceil((x0 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
+            let rowStart = Math.ceil((y0 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
+            let colEnd = Math.ceil((x1 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
+            let rowEnd = Math.ceil((y1 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
 
-            if (colEnd > env.geometry.colNum) {
-                colEnd = env.geometry.colNum;
-            }
-            if (rowEnd > env.geometry.rowNum) {
-                rowEnd = env.geometry.rowNum;
-            }
+            colStart = Math.min(Math.max(colStart, 0), geometry.colNum);
+            rowStart = Math.min(Math.max(rowStart, 0), geometry.rowNum);
+            colEnd = Math.min(Math.max(colEnd, 0), geometry.colNum);
+            rowEnd = Math.min(Math.max(rowEnd, 0), geometry.rowNum);
 
             env.selection.rowStart = rowStart;
             env.selection.rowEnd = rowEnd;
