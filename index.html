@@ -1,528 +1,166 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Purge</title>
+    <title>LOVE</title>
     <style>
         html, body {
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            height: 100%;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
             user-select: none;
-            background-color: #62adcd;
+            overflow: hidden;
+            background: #fff;
         }
     </style>
 </head>
+
 <body>
-    <canvas id="game"></canvas>
+    <canvas id="main"></canvas>
     <script>
 
-        function calcGeometry(width, height) {
-            let tmpWidth = width;
-            let tmpHeight = Math.floor(tmpWidth * 16 / 9);
-            if (tmpHeight > height) {
-                tmpHeight = height;
-                tmpWidth = Math.floor(tmpHeight * 9 / 16);
-            }
-            let x = Math.floor((width - tmpWidth) / 2);
-            let y = Math.floor((height - tmpHeight) / 2);
+        function initialize() {
+            let canvas = document.getElementById('main');
+            let context = canvas.getContext('2d');
 
-            let colNum = 10;
-            let rowNum = 15;
-            let panelMargin = 0;
-            let panelPadding = 10;
-            let panelRadius = 10;
-            let gridRaidus = 5;
-            let gridMargin = 3;
-            let gridSize = (tmpWidth - panelMargin * 2 - panelPadding * 2 + gridMargin) / colNum - gridMargin;
+            let width = window.innerWidth;
+            let height = window.innerHeight;
 
-            let panelWidth = (gridSize + gridMargin) * colNum - gridMargin + panelPadding * 2;
-            let panelHeight = (gridSize + gridMargin) * rowNum - gridMargin + panelPadding * 2;
-            let panelX = panelMargin;
-            let panelY = tmpHeight - panelMargin - panelHeight;
+            canvas.width = width;
+            canvas.height = height;
 
+            let blockSize = 50;
+            let blockMargin = 10;
 
-            let scoreStyle = 'bolder 48px Sans-serif';
-            let scoreX = tmpWidth / 2;
-            let scoreY = 10;
+            let blockColumn = Math.floor((width + blockMargin) / (blockSize + blockMargin));
+            let blockRow = Math.floor((height + blockMargin) / (blockSize + blockMargin));
 
+            let blockPaddingX = (width - blockColumn * (blockSize + blockMargin) + blockMargin) / 2;
+            let blockPaddingY = (height - blockRow * (blockSize + blockMargin) + blockMargin) / 2;
 
-            let resetX = 10;
-            let resetY = 10;
-            let resetSize = 48;
+            let thatDay = 1731162600000;
+            let waitDay = 1749479400000;
 
-            let whiteTagX = tmpWidth / 4;
-            let blackTagX = tmpWidth * 3 / 4;
-            let tagY = panelY;
-            let tagStyle = 'bolder 36px Sans-serif';
-
+            context.font="italic small-caps 900 200px arial";
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            let text = context.measureText('999');
+            let textWidth = text.width;
+            let textHeight = 200;
 
             return {
-                x: x,
-                y: y,
-                width: tmpWidth,
-                height: tmpHeight,
-                colNum: colNum,
-                rowNum: rowNum,
-                panelMargin: panelMargin,
-                panelPadding: panelPadding,
-                panelRadius: panelRadius,
-                panelX: panelX,
-                panelY: panelY,
-                panelWidth: panelWidth,
-                panelHeight: panelHeight,
-                panelColor: '#3f7bad',
-                gridMargin: gridMargin,
-                gridRaidus: gridRaidus,
-                gridSize: gridSize,
-                gridColor: '#2a4d6b',
-                scoreStyle: scoreStyle,
-                scoreX: scoreX,
-                scoreY: scoreY,
-                resetX: resetX,
-                resetY: resetY,
-                resetSize: resetSize,
-                whiteTagX: whiteTagX,
-                blackTagX: blackTagX,
-                tagY: tagY,
-                tagStyle: tagStyle
+                canvas, context,
+                width, height,
+                blockSize, blockMargin,
+                blockColumn, blockRow,
+                blockPaddingX, blockPaddingY,
+                thatDay, waitDay,
+                textWidth, textHeight,
             };
         }
 
-        function initMatrix(col, row) {
-            let matrix = [];
-            for (let i = 0; i < row; ++i) {
-                let tmp = [];
-                for (let j = 0; j < col; ++j) {
-                    tmp.push(0);
-                }
-                matrix.push(tmp);
-            }
-            return matrix;
-        }
-
-        function generateMatrix(matrix, x, y, col, row, p) {
-            for (let i = x; i < x+col; ++i) {
-                for (let j = y; j < y+row; ++j) {
-                    matrix[j][i] = Math.random() > p ? 1 : 0;
-                }
-            }
-        }
-
-        function initSelection() {
-            return {
-                visible: false,
-                x: 0,
-                y: 0,
-                width: 0,
-                height: 0
-            }
-        }
-
-        function initClick() {
-            return {
-                valid: false,
-                x: 0,
-                y: 0
-            }
-        }
-
-        function handleSelect(env, flap) {
-            let selection = env.selection;
-            let geometry = env.geometry;
-            let x = selection.x;
-            let width = selection.width;
-            if (width < 0) {
-                x += width;
-                width = - width;
-            }
-            let y = selection.y;
-            let height = selection.height;
-            if (height < 0) {
-                y += height;
-                height = - height;
-            }
-
-            let x1 = x + width;
-            let y1 = y + height;
-            let x0 = Math.min(Math.max(x - geometry.panelX - geometry.panelPadding, 0), geometry.panelWidth - geometry.panelPadding * 2);
-            let y0 = Math.min(Math.max(y - geometry.panelY - geometry.panelPadding, 0), geometry.panelHeight - geometry.panelPadding * 2);
-            x1 = Math.min(Math.max(x1 - geometry.panelX - geometry.panelPadding, 0), geometry.panelWidth - geometry.panelPadding * 2);
-            y1 = Math.min(Math.max(y1 - geometry.panelY - geometry.panelPadding, 0), geometry.panelHeight - geometry.panelPadding * 2);
-
-            // let colStart = Math.floor((x0 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            // let rowStart = Math.floor((y0 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            // let colEnd = Math.floor((x1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-            // let rowEnd = Math.floor((y1 + geometry.gridSize / 2 + geometry.gridMargin) / (geometry.gridSize + geometry.gridMargin));
-
-            let colStart = Math.ceil((x0 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
-            let rowStart = Math.ceil((y0 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
-            let colEnd = Math.ceil((x1 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
-            let rowEnd = Math.ceil((y1 - geometry.gridSize / 2) / (geometry.gridSize + geometry.gridMargin));
-
-            colStart = Math.min(Math.max(colStart, 0), geometry.colNum);
-            rowStart = Math.min(Math.max(rowStart, 0), geometry.rowNum);
-            colEnd = Math.min(Math.max(colEnd, 0), geometry.colNum);
-            rowEnd = Math.min(Math.max(rowEnd, 0), geometry.rowNum);
-
-            env.selection.rowStart = rowStart;
-            env.selection.rowEnd = rowEnd;
-            env.selection.colStart = colStart;
-            env.selection.colEnd = colEnd;
-
-
-            let count = 0;
-            for (let i = rowStart; i < rowEnd; ++i) {
-                for (let j = colStart; j < colEnd; ++j) {
-                    count += env.matrix[i][j];
-                }
-            }
-            let total = (colEnd - colStart) * (rowEnd - rowStart);
-
-            env.white = count;
-            env.black = total - count;
-
-            if (!flap) {
-                return;
-            }
-
-            if (count * 2 <= total || count >= total) {
-                env.white = env.black = 0;
-                return;
-            }
-            env.score += total - count;
-            for (let i = rowStart; i < rowEnd; ++i) {
-                for (let j = colStart; j < colEnd; ++j) {
-                    env.matrix[i][j] = 1 - env.matrix[i][j];
-                }
-            }
-            env.black = env.white = 0;
-            // calc(env);
-        }
-
-        function mouseDown(x, y, env) {
-            let geometry = env.geometry;
-            if (x >= geometry.panelX && x < geometry.panelX + geometry.panelWidth &&
-                y >= geometry.panelY && y < geometry.panelY + geometry.panelHeight
-            ) {
-                env.selection.visible = true;
-                env.selection.x = x;
-                env.selection.y = y;
-                env.selection.width = x - env.selection.x;
-                env.selection.height = y - env.selection.y;
-                env.selection.colStart = env.selection.colEnd = env.selection.rowStart = env.selection.rowEnd = 0;
-            }
-            env.click.x = x;
-            env.click.y = y;
-            env.click.valid = true;
-        }
-        function mouseUp(x, y, env) {
-            if (env.selection.visible) {
-                handleSelect(env, true);
-            } else if (env.click.valid) {
-                if (x >= geometry.resetX && x < geometry.resetX + geometry.resetSize &&
-                    y >= geometry.resetY && x < geometry.resetY + geometry.resetSize
-                ) {
-                    initValue(env);
-                }
-            }
-            env.selection.visible = false;
-            env.click.valid = false;
-        }
-        function mouseMove(x, y, env) {
-            if (env.selection.visible) {
-                env.selection.width = x - env.selection.x;
-                env.selection.height = y - env.selection.y;
-                handleSelect(env, false);
-            }
-            if ((x - env.click.x) * (x - env.click.x) + (y - env.click.y) * (y - env.click.y) >= 625) {
-                env.click.valid = false;
-            }
-        }
-
-        function initEvent(env) {
-            let canvas = env.canvas;
-            canvas.addEventListener("mousedown", (event) => {
-                if (env.mobile || env.click) {
-                    return;
-                }
-                env.click = true;
-                // console.log('mousedown');
-                mouseDown(event.offsetX, event.offsetY, env);
-            });
-            canvas.addEventListener("mouseup", (event) => {
-                if (env.mobile || !env.click) {
-                    return;
-                }
-                env.click = false;
-                // console.log('mouseup');
-                mouseUp(event.offsetX, event.offsetY, env);
-            });
-            canvas.addEventListener("mousemove", (event) => {
-                if (env.mobile || !env.click) {
-                    return;
-                }
-                // console.log('mousemove');
-                mouseMove(event.offsetX, event.offsetY, env);
-            });
-
-            canvas.addEventListener("touchstart", (event) => {
-                if (env.click) {
-                    return;
-                }
-                env.mobile = true;
-                env.click = true;
-                // console.log('touchstart');
-                tmp = event.changedTouches[0];
-                // console.log(event);
-                mouseDown(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
-            });
-            canvas.addEventListener("touchend", (event) => {
-                if (!env.click) {
-                    return;
-                }
-                env.mobile = true;
-                env.click = false;
-                // console.log('touchend');
-                tmp = event.changedTouches[0];
-                mouseUp(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
-            });
-            canvas.addEventListener("touchmove", (event) => {
-                if (!env.click) {
-                    return;
-                }
-                env.mobile = true;
-                // console.log('touchmove');
-                tmp = event.changedTouches[0];
-                mouseMove(tmp.pageX-env.geometry.x, tmp.pageY-env.geometry.y, env);
-            });
-            // window.onresize = (event) => {
-            //     env.geometry = setGeometry(env.canvas);
-            //     console.log(env);
-            // }
-        }
-
-        function setGeometry(canvas) {
-            let browserWidth = window.innerWidth;
-            let browserHeight = window.innerHeight;
-
-            let geometry = calcGeometry(browserWidth, browserHeight);
-
-            canvas.width = geometry.width;
-            canvas.height = geometry.height;
-            canvas.style.left = geometry.x + 'px';
-            canvas.style.top = geometry.y + 'px';
-            canvas.style.position = 'absolute';
-
-            return geometry;
-        }
-
-        function init() {
-            let canvas = document.getElementById('game');
-            let context = canvas.getContext('2d');
-            let geometry = setGeometry(canvas);
-            let matrix = initMatrix(geometry.colNum, geometry.rowNum);
-            let selection = initSelection();
-            let click = initClick();
-            return {
-                canvas: canvas,
-                context: context,
-                geometry: geometry,
-                matrix: matrix,
-                selection: selection,
-                click: click,
-                score: 0,
-                black: 0,
-                white: 0
-            }
-        }
-
-        function drawRoundedRect(ctx, x, y, width, height, radius) {
+        function drawBlock(ctx, x, y, size) {
             ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.lineTo(x + width - radius, y);
-            ctx.arcTo(x + width, y, x + width, y + radius, radius);
-            ctx.lineTo(x + width, y + height - radius);
-            ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-            ctx.lineTo(x + radius, y + height);
-            ctx.arcTo(x, y + height, x, y + height - radius, radius);
-            ctx.lineTo(x, y + radius);
-            ctx.arcTo(x, y, x + radius, y, radius);
+            ctx.moveTo(x + size / 2, y);
+            ctx.lineTo(x + size, y + size / 2);
+            ctx.lineTo(x + size / 2, y + size);
+            ctx.lineTo(x, y + size / 2);
             ctx.closePath();
-            ctx.stroke();
             ctx.fill();
         }
 
-        function drawPanel(env) {
-            let ctx = env.context;
-            let geometry = env.geometry;
+        function drawBlockRing(ctx, column, row, x, y, size, margin, num) {
+            let top = 0, bottom = row - 1, left = 0, right = column - 1;
+            let curR = 0, curC = 0;
+            const dr = [0, 1, 0, -1];
+            const dc = [1, 0, -1, 0];
+            let dir = 0;
+            let count = 0;
+            ctx.fillStyle = '#000';
+            while(count < num) {
+                let curY = y + curR * (size + margin);
+                let curX = x + curC * (size + margin);
+                drawBlock(ctx, curX, curY, size);
+                count += 1;
+                
+                curR += dr[dir];
+                curC += dc[dir];
+                
+                if (dir == 0 && curC >= right) {
+                    dir = 1;
+                    top += 1;
+                } else if (dir == 1 && curR >= bottom) {
+                    dir = 2;
+                    right -= 1;
+                } else if (dir == 2 && curC <= left) {
+                    dir = 3;
+                    bottom -= 1;
+                } else if (dir == 3 && curR <= top) {
+                    dir = 0;
+                    left += 1;
+                }
+            }
+            return {
+                curC, curR
+            };
+        }
+
+
+        function main(timestamp, manager) {
+            const current = Date.now();
+            let percent = (current - manager.thatDay) / (manager.waitDay - manager.thatDay);
+            percent = percent > 1 ? 1 : percent;
+            let num = Math.floor((manager.blockColumn * manager.blockRow) * percent);
+
+            let ctx = manager.context;
+            ctx.clearRect(0, 0, manager.width, manager.height);
+
+            let position = drawBlockRing(ctx,
+                manager.blockColumn,
+                manager.blockRow,
+                manager.blockPaddingX,
+                manager.blockPaddingY,
+                manager.blockSize,
+                manager.blockMargin,
+                num);
             
-            ctx.fillStyle = ctx.strokeStyle = geometry.panelColor;
-            drawRoundedRect(
-                ctx,
-                geometry.panelX,
-                geometry.panelY,
-                geometry.panelWidth,
-                geometry.panelHeight,
-                geometry.panelRadius
+            ctx.fillStyle = Math.floor(current / 1000) % 2 == 0 ? '#f091997f' : '#f09199';
+            drawBlock(ctx,
+                manager.blockPaddingX + position.curC * (manager.blockSize + manager.blockMargin),
+                manager.blockPaddingY + position.curR * (manager.blockSize + manager.blockMargin),
+                manager.blockSize
             );
 
-            ctx.fillStyle = ctx.strokeStyle = geometry.gridColor;
+            let day = Math.floor((current - manager.thatDay) / (1000 * 60 * 60 * 24));
 
-            let y = geometry.panelY + geometry.panelPadding;
-            for (let i = 0; i < geometry.rowNum; i++) {
-                let x = geometry.panelX + geometry.panelPadding;
-                for (let j = 0; j < geometry.colNum; j++) {
-                    drawRoundedRect(ctx, x, y, geometry.gridSize, geometry.gridSize, geometry.gridRaidus);
-                    x += geometry.gridSize + geometry.gridMargin;
-                }
-                y += geometry.gridSize + geometry.gridMargin;
-            }
-            let selection = env.selection;
-
-            if (selection.visible) {
-                ctx.fillStyle = ctx.strokeStyle = '#e6b422';
-                y = geometry.panelY + geometry.panelPadding + selection.rowStart * (geometry.gridSize + geometry.gridMargin);
-                for (let i = selection.rowStart; i < selection.rowEnd; ++i) {
-                    let x = geometry.panelX + geometry.panelPadding + selection.colStart * (geometry.gridSize + geometry.gridMargin);
-                    for (let j = selection.colStart; j < selection.colEnd; ++j) {
-                        drawRoundedRect(ctx, x, y, geometry.gridSize, geometry.gridSize, geometry.gridRaidus);
-                        x += geometry.gridSize + geometry.gridMargin;
-                    }
-                    y += geometry.gridSize + geometry.gridMargin;
-                }
-            }
-
-
-        }
-
-        function drawCircle(ctx, x, y, size) {
-            ctx.beginPath();
-            ctx.arc(x+size/2, y+size/2, size/2-2, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.stroke();
-        }
-
-        function drawSingle(env, type) {
-            let ctx = env.context;
-            let matrix = env.matrix;
-            let geometry = env.geometry;
-            let col = env.geometry.colNum;
-            let row = env.geometry.rowNum;
-            
-            let y = geometry.panelY + geometry.panelPadding;
-            for (let i = 0; i < row; ++i) {
-                let x = geometry.panelX + geometry.panelPadding;
-                for (let j = 0; j < col; ++j) {
-                    if (matrix[i][j] == type) {
-                        drawCircle(ctx, x, y, geometry.gridSize);
-                    }
-                    x += geometry.gridSize + geometry.gridMargin;
-                }
-                y += geometry.gridSize + geometry.gridMargin;
+            ctx.fillStyle = Math.floor(current / 1000) % 2 == 1 ? '#f091997f' : '#f09199';
+            if (manager.width < manager.height) {
+                ctx.save();
+                ctx.translate(manager.width / 2, manager.height / 2) 
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(day, 0, 0);
+                ctx.restore();
+            } else {
+                ctx.fillText(day, manager.width / 2, manager.height / 2);
             }
         }
 
-        function drawMatrix(env) {
-            let ctx = env.context;
-            ctx.fillStyle = ctx.strokeStyle = '#333333';
-            drawSingle(env, 0);
-            ctx.fillStyle = ctx.strokeStyle = '#fdeff2';
-            drawSingle(env, 1);
-        }
-
-        function drawSelection(env) {
-            let selection = env.selection;
-            if (!selection.visible) {
-                return;
-            }
-            let ctx = env.context;
-            ctx.strokeStyle = '#000000';
-            ctx.strokeRect(selection.x, selection.y, selection.width, selection.height);
-            ctx.fillStyle = '#0000007f';
-            ctx.fillRect(selection.x, selection.y, selection.width, selection.height);
-        }
-
-        function drawScore(env) {
-            let ctx = env.context;
-            let geometry = env.geometry;
-            ctx.fillStyle = ctx.strokeStyle = '#b83b5e';
-            ctx.font = env.geometry.scoreStyle;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(env.score, geometry.scoreX, geometry.scoreY);
-
-            ctx.font = geometry.tagStyle;
-            ctx.textBaseline = 'bottom';
-            ctx.fillStyle = ctx.strokeStyle = '#eeeeee';
-            ctx.fillText(env.white, geometry.whiteTagX, geometry.tagY);
-            ctx.fillStyle = ctx.strokeStyle = '#222831';
-            ctx.fillText(env.black, geometry.blackTagX, geometry.tagY);
-        }
-
-        function run(timestamp, env) {
-            env.context.clearRect(0, 0, env.geometry.width, env.geometry.height);
-            drawPanel(env);
-            drawMatrix(env);
-            drawScore(env);
-            drawSelection(env);
-        }
-
-        function initValue(env) {
-            // generateMatrix(env.matrix, 0, 0, env.geometry.colNum, env.geometry.rowNum, 0.5);
-            let geometry = env.geometry;
-            for (let i = 0; i < geometry.rowNum; ++i) {
-                for(let j = 0; j < geometry.colNum; ++j) {
-                    env.matrix[i][j] = 0;
-                }
-            }
-            let count = 0;
-            let index = 0;
-            let total = geometry.rowNum * geometry.colNum;
-            let target = Math.floor(total / 2);
-            while (count < target) {
-                index %= total;
-                let i = Math.floor(index / geometry.colNum);
-                let j = index % geometry.colNum;
-                if (env.matrix[i][j] == 0 && Math.random() > 0.5) {
-                    env.matrix[i][j] = 1;
-                    count += 1;
-                }
-                index += 1;
-            }
-            env.score = 0;
-        }
-
-        // function calc(env) {
-        //     let geometry = env.geometry;
-        //     for (let i = 0; i < geometry.rowNum; ++i) {
-        //         for(let j = 0; j < geometry.colNum; ++j) {
-        //             env.pretreat[i][j] = 0;
-        //             let A = i > 0 ? env.pretreat[i-1][j] : 0;
-        //             let B = j > 0 ? env.pretreat[i][j-1] : 0;
-        //             let C = j > 0 && i > 0 ? env.pretreat[i-1][j-1] : 0;
-        //             env.pretreat[i][j] = A + B - C + env.matrix[i][j];
-        //         }
-        //     }
-        //     env.black = env.white = 0;
-        // }
 
         (function() {
-            let env = init();
-            env.mobile = false;
-            env.click = false;
-            initEvent(env);
-            initValue(env);
-            // calc(env);
-            function loop(timestamp) {
-                run(timestamp, env);
-                window.requestAnimationFrame(loop);
+            const manager = initialize();
+            console.log(manager);
+            function wrapper(timestamp) {
+                main(timestamp, manager);
+                manager.renderId = window.requestAnimationFrame(wrapper);
             }
-            window.requestAnimationFrame(loop);
+
+            manager.renderId = window.requestAnimationFrame(wrapper);
         })();
     </script>
 </body>
+
 </html>
+    
